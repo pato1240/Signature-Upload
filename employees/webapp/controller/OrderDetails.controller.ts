@@ -7,8 +7,8 @@ import Context from "sap/ui/model/odata/v2/Context";
 import Utils from "../utils/Utils";
 import ODataListBinding from "sap/ui/model/odata/v2/ODataListBinding";
 import Filter from "sap/ui/model/Filter";
-import UploadSet, { UploadSet$BeforeUploadStartsEvent, UploadSet$UploadCompletedEvent } from "sap/m/upload/UploadSet";
-import UploadSetItem from "sap/m/upload/UploadSetItem";
+import UploadSet, { UploadSet$AfterItemRemovedEvent, UploadSet$BeforeUploadStartsEvent, UploadSet$UploadCompletedEvent } from "sap/m/upload/UploadSet";
+import UploadSetItem, { UploadSetItem$OpenPressedEvent } from "sap/m/upload/UploadSetItem";
 import ODataModel from "sap/ui/model/odata/v2/ODataModel";
 import Item from "sap/ui/core/Item";
 import deepEqual from "sap/base/util/deepEqual";
@@ -47,7 +47,6 @@ export default class OrderDetails extends BaseController {
     }
 
     public onClearPress () : void {
-
         try {
             const oSignaturePad = this.byId("signature") as Signature;
             oSignaturePad.clear();
@@ -66,7 +65,7 @@ export default class OrderDetails extends BaseController {
             MessageBox.error(resourceBundle.getText("fillSignature")||'No text defined');
         }else{
             const sMediaContent = oSignaturePad.getSignature().replace("data:image/png;base64,","");
-
+            
             const body = {
                 url: "/SignatureSet",
                 data: {
@@ -168,10 +167,35 @@ export default class OrderDetails extends BaseController {
             ],
             template: new UploadSetItem ({
                 fileName: "{zincidence>FileName}",
-                mediaType: "{zincidence>MimeType}"
+                mediaType: "{zincidence>MimeType}",
+                visibleEdit: false,
+                url: "/",
+                openPressed: this.onOpenPress.bind(this)
             })
         });
 
+    }
+
+    public async onAfterItemDelete(event: UploadSet$AfterItemRemovedEvent): Promise<void> {
+        const item = event.getParameter("item") as UploadSetItem;
+        const bindingContext = item.getBindingContext("zincidence") as Context;
+        // console.log(bindingContext.getObject());
+        const sPath = bindingContext.getPath() as string;
+        const body = {
+            url: sPath
+        }
+        // console.log(body);
+        const utils = new Utils(this);
+        await utils.crud('delete', new JSONModel(body));
+        item.getBinding("items")?.refresh();
+    }
+
+    public onOpenPress(event: UploadSetItem$OpenPressedEvent): void {
+        const item = event.getParameter("item") as UploadSetItem;
+        const bindingContext = item?.getBindingContext("zincidence") as Context;
+        const sPath = bindingContext.getPath();
+        let url = "/sap/opu/odata/sap/YSAPUI5_SRV_01" + sPath + "/$value";
+        item.setUrl(url);
     }
 
 }
