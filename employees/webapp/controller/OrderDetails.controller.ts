@@ -179,12 +179,10 @@ export default class OrderDetails extends BaseController {
     public async onAfterItemDelete(event: UploadSet$AfterItemRemovedEvent): Promise<void> {
         const item = event.getParameter("item") as UploadSetItem;
         const bindingContext = item.getBindingContext("zincidence") as Context;
-        // console.log(bindingContext.getObject());
         const sPath = bindingContext.getPath() as string;
         const body = {
             url: sPath
         }
-        // console.log(body);
         const utils = new Utils(this);
         await utils.crud('delete', new JSONModel(body));
         item.getBinding("items")?.refresh();
